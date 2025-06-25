@@ -1,6 +1,6 @@
 # Smart-Fitness-Data-Analysis - Bellabeat 
 
-This project involves a data analysis workflow using R. 
+This project involves a data analysis workflow using R. Main libraries include *tidyverse, ggplot2*.  
 
 - Necessary packages are installed and loaded for cleaning, processing, and analyzing datasets. 
 
