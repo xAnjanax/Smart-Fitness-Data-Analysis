@@ -1,0 +1,254 @@
+---
+title: "Bellabeat Case Study Report"
+author: "Anjana"
+date: "2025-06-18"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+## Business Task
+The goal of this project is to analyze smart device usage data to identify how customers are using their smart devices, enabling informed and strategic marketing decisions.
+
+## Data Sources Used
+The primary data source used for this project was the Fitbit Fitness Tracker Data. It contains minute-level output for physical activity, heart rate, sleep monitoring, as well as information about daily activity and steps, useful for exploring user habits.
+
+## Installing and Loading necessary packages
+
+The following packages were installed using install.packages() and loaded using library(): 
+
+* tidyverse
+* lubridate
+* tidyr
+* here
+* dplyr
+* janitor
+* skimr
+
+```{r include=FALSE}
+
+# install.packages("tidyverse")
+# install.packages("lubridate")
+# install.packages("tidyr")
+# install.packages("here")
+# install.packages("dplyr")
+# install.packages("janitor")
+# install.packages("skimr") 
+
+library(tidyverse)
+library(lubridate)
+library(tidyr)
+library(here)
+library(dplyr)
+library(janitor)
+library(skimr)
+
+```
+
+## Cleaning and Manipulation of Data
+The cleaning and manipulation of data was done with the programming language R, using RStudio Cloud. The files taken into consideration were:
+
+* Daily Activity
+* Daily Calories
+* Sleep Day
+
+### Importing Datasets
+The datasets were imported as follows:
+
+```{r, comment=""}
+
+daily_activity <- read.csv("~/Bellabeat_Capstone_GDAC/Bellabeat_Files/Bellabeat_Report_Files/dailyActivity_merged.csv")
+# head(daily_activity)
+
+daily_calories <- read.csv("~/Bellabeat_Capstone_GDAC/Bellabeat_Files/Bellabeat_Report_Files/dailyCalories_merged.csv")
+# head(daily_calories) 
+
+sleep_day <- read.csv("~/Bellabeat_Capstone_GDAC/Bellabeat_Files/Bellabeat_Report_Files/sleepDay_merged.csv")
+# head(sleep_day) 
+
+``` 
+
+#### Checking for duplicates
+Upon executing the code segment below:
+
+```{r, results='hide'}
+
+sum(duplicated(daily_activity)) 
+sum(duplicated(daily_calories)) 
+sum(duplicated(sleep_day)) 
+
+``` 
+
+```{r echo=FALSE, comment=""}
+
+sum(duplicated(daily_activity)) 
+sum(duplicated(daily_calories)) 
+sum(duplicated(sleep_day)) 
+
+``` 
+
+It can be observed that there are three row-wise duplicates in the “sleepDay” dataset. This is resolved by removing them:
+
+```{r, comment=""}
+sleep_day_dist <- distinct(sleep_day)
+sum(duplicated(sleep_day_dist)) 
+``` 
+
+#### Date Formatting
+
+```{r, comment=""}
+glimpse(daily_activity)
+glimpse(daily_calories) 
+glimpse(sleep_day_dist)
+``` 
+
+The dates/days in all three datasets are in character format. We will be converting this to date and datetime formats to ensure consistency.
+
+The dates listed in the “daily_calories” and “sleep_day” can be used to combine the datasets. However, the dates are in date+time format in the “sleep_day” dataset. They can be separated the following way:
+
+```{r, comment=""}
+
+  # Conversion from Char to Date/DateTime 
+
+daily_activity$ActivityDate <- as.Date(daily_activity$ActivityDate, format = "%m/%d/%Y")
+# head(daily_activity$ActivityDate)
+
+# head(daily_calories$ActivityDay)
+
+daily_calories$ActivityDay <- as.Date(daily_calories$ActivityDay, format = "%m/%d/%Y")
+# head(daily_calories$ActivityDay) 
+
+sleep_day_dist$day_and_time <- mdy_hms(sleep_day_dist$SleepDay)
+# glimpse(sleep_day_dist) 
+# View(sleep_day_dist)
+
+  # Separating datetime into date and time 
+
+sleep_day_dist$date <- as.Date(sleep_day_dist$day_and_time)
+sleep_day_dist$time <- format(sleep_day_dist$day_and_time, format = "%I:%M:%S %p")
+
+# glimpse(sleep_day_dist) 
+# View(sleep_day_dist) 
+
+  # Checking if date values match in "daily_calories" and "sleep_day_dist" 
+
+all(sleep_day_dist$date %in% daily_calories$ActivityDay) 
+all(daily_calories$ActivityDay %in% sleep_day_dist$date) 
+
+  # Combining dates columns in "daily_calories" and "sleep_day"
+
+daily_cals_sleep_merged <- merge(daily_calories, sleep_day_dist, by.x = c("Id", "ActivityDay"), by.y = c("Id", "date")) 
+
+# View(daily_cals_sleep_merged) 
+
+  # Accounting for NA values 
+
+clean_cals_sleep <- daily_cals_sleep_merged %>% distinct() %>% drop_na() 
+# View(clean_cals_sleep) 
+
+``` 
+
+Now we move on to the summary of the analysis in the next section. 
+
+### Analyzing the Data
+
+#### What are some trends in smart device usage?
+
+Lightly Active Minutes vs Calories 
+
+```{r}
+ggplot(data = daily_activity) + geom_point(mapping = aes(x=Calories, y=LightlyActiveMinutes)) + geom_smooth(mapping = aes(x=Calories, y=LightlyActiveMinutes))
+``` 
+
+Fairly Active Minutes vs Calories 
+
+```{r}
+ggplot(data = daily_activity) + geom_point(mapping = aes(x=Calories, y=FairlyActiveMinutes)) + geom_smooth(mapping = aes(x=Calories, y=FairlyActiveMinutes))
+```
+
+Very Active Minutes vs Calories 
+
+```{r}
+
+ggplot(data = daily_activity) + geom_point(mapping = aes(x=Calories, y=VeryActiveMinutes)) + geom_smooth(mapping = aes(x=Calories, y=VeryActiveMinutes)) 
+
+# ggplot(data = daily_activity, aes(x=Calories, y=VeryActiveMinutes)) + geom_col(fill='blue') + labs(title="Very Active Minutes vs. Calories") 
+
+```
+
+Sedentary Minutes vs Calories 
+
+```{r}
+ggplot(data = daily_activity) + geom_point(mapping = aes(x=SedentaryMinutes, y=Calories)) + geom_smooth(mapping = aes(x=SedentaryMinutes, y=Calories)) 
+```
+
+There appear to be _essentially_ linear relationships for lightly active, very active, and fairly active users. That is, with an increase in the time of usage for very active, lightly active, and fairly active users, the number of calories burnt also increases. However, this is not the case for the sedentary  users – the calories burnt initially increase, then decrease with even more sedentary time. While being more distributed, the overall results seem to indicate that the more sedentary people are, the lesser calories they burn. 
+
+Before examining the relationship between total sleep and calories, let us look at the total minutes asleep and total time in bed: 
+
+```{r}
+
+ggplot(data = clean_cals_sleep) + geom_point(mapping = aes(x=TotalTimeInBed, y=TotalMinutesAsleep)) + geom_smooth(aes(x=TotalTimeInBed, y=TotalMinutesAsleep))
+
+``` 
+
+Plotting Sleep against Calories: 
+
+```{r}
+ggplot(data = clean_cals_sleep, aes(x=TotalMinutesAsleep, y=Calories)) + geom_col(fill='blue') + labs(title="Total Minutes Asleep vs. Calories") 
+``` 
+
+In the above graph, we can see that the distribution resembles a bell-shaped curve. This could be an indication that too little or too much sleep affects the energy levels of the people, who burn lesser calories, compared to the people who sleep in moderation -- the values in the middle of the range; they burn more calories effectively. 
+
+But this information alone might not be sufficient. 
+
+We can also look at the relationship between Total Steps and Calories. Let us cross check the relationship between total steps and total distance before we start. 
+
+```{r}
+
+ggplot(data = daily_activity) + geom_smooth(mapping = aes(x=TotalSteps, y=TotalDistance)) + geom_point(mapping = aes(x=TotalSteps, y=TotalDistance))
+
+```
+
+As expected. the relationship is linear -- the more the steps, the more the distance covered. This is important to cover, as the distance covered could be a result of driving, or travelling in vehicles where people don't actually cover steps. 
+
+Plotting Total Steps and Calories: 
+
+```{r} 
+
+ggplot(data = daily_activity) + geom_point(mapping = aes(x=TotalSteps, y=Calories)) + geom_smooth(mapping = aes(x=TotalSteps, y=Calories)) 
+
+``` 
+
+The relationship is essentially linear in this case as well, implying that more steps correspond to more calories burnt. 
+
+#### How could these trends apply to Bellabeat customers?
+
+Through analyzing the data, we arrived at the following findings: 
+
+* **More Activity:** Lightly active, fairly active, and very active users burn more calories with an increase in their activity duration, while sedentary users burn lesser calories the longer they remain sedentary. 
+
+* **Sleep Duration:** When people sleep too little or too less, they burn lesser calories, than when people sleep in moderation. 
+
+* **Daily Steps:** When people have a higher record of total steps, they burn more calories. 
+
+Bellabeat users may be trying to find a balance, in terms of how active they should be, how much they should sleep, and how many steps they should walk in a day, in order to burn more calories. 
+
+#### How could these trends help influence Bellabeat marketing strategy?
+
+Some recommendations based on the above findings are as follows: 
+
+* Users can be provided with the option to set goals for how many calories they want to burn over a time period, say, in a month, and have a customized plan set out. 
+
+* By balancing a lack of one factor by compensating in another, 
+      while also ensuring that users are comfortable, 
+      and maintain their overall health in all aspects of:  
+      activity levels, sleep duration and daily steps, 
+  users can burn more calories to reach their goal efficiently. 
+  
+* Bellabeat can send push notifications to keep users on track with their set objectives, and send gentle warnings to help them regulate their activity. For instance, if a user has been sedentary for too long, they can be alerted with a message that would make them add to their activity levels for the day. 
+
+By exploring the above strategies, Bellabeat can provide services that satisfy their users, and sustain the company's purpose while continuing to grow in the market. 
+
+
